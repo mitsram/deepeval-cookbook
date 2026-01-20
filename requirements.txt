@@ -1,0 +1,4 @@
+deepeval
+anthropic
+google-genai
+python-dotenv
