@@ -12,11 +12,12 @@ DeepEval provides a flexible abstraction for defining tasks, curating metrics, a
 
 ## Repository Evaluation Assets
 
-- Harness for scoring generations: [test_app.py](../test_app.py)
-- Harness for requirement analysis prompts: [test_requirement_analysis.py](../test_requirement_analysis.py)
+- Harness for requirement analysis prompts: [tests/test_requirement_analysis.py](../tests/test_requirement_analysis.py)
+- Harness for tabular test-case prompts: [tests/test_test_cases_table_output.py](../tests/test_test_cases_table_output.py)
 - Prompt bank for QA coverage: [prompts/test_generation_prompt.md](../prompts/test_generation_prompt.md)
 - Prompt bank for requirement reviews: [prompts/requirement_analysis.md](../prompts/requirement_analysis.md)
-- Project setup guide: [docs/PYTHON_SETUP.md](PYTHON_SETUP.md)
+- Prompt bank for table outputs: [prompts/test_cases_table_output.md](../prompts/test_cases_table_output.md)
+- Environment bootstrap instructions: [README.md](../README.md#python-environment-setup)
 - Dependency manifest: [requirements.txt](../requirements.txt)
 
 These files illustrate how to: load prompts, wrap a hosted Claude model in a DeepEval-compatible interface, declare `GEval` metrics, and run `evaluate` across curated `LLMTestCase` instances.
@@ -25,10 +26,10 @@ These files illustrate how to: load prompts, wrap a hosted Claude model in a Dee
 
 | Component | Purpose | Where Implemented |
 |-----------|---------|-------------------|
-| `LLMTestCase` | Captures the evaluation input, actual model output, and reference expectation. | [test_app.py](../test_app.py), [test_requirement_analysis.py](../test_requirement_analysis.py) |
-| `DeepEvalBaseLLM` subclass | Adapts external LLM client APIs (Anthropic) to DeepEval. | `ClaudeModel` in [test_app.py](../test_app.py) |
-| `GEval` metric | Expresses judging criteria via natural-language instructions and scored thresholds. | Multiple metric blocks in [test_app.py](../test_app.py) |
-| `evaluate` runner | Executes metrics against test cases and aggregates results. | Tail section of [test_app.py](../test_app.py) |
+| `LLMTestCase` | Captures the evaluation input, actual model output, and reference expectation. | [tests/test_requirement_analysis.py](../tests/test_requirement_analysis.py), [tests/test_test_cases_table_output.py](../tests/test_test_cases_table_output.py) |
+| `DeepEvalBaseLLM` subclass | Adapts external LLM client APIs (Anthropic) to DeepEval. | `ClaudeModel` implementations in each harness |
+| `GEval` metric | Expresses judging criteria via natural-language instructions and scored thresholds. | Metric definitions in [tests/test_requirement_analysis.py](../tests/test_requirement_analysis.py), [tests/test_test_cases_table_output.py](../tests/test_test_cases_table_output.py) |
+| `evaluate` runner | Executes metrics against test cases and aggregates results. | Tail sections of the same harness files |
 
 DeepEval executes each metric by prompting the chosen judge model (Claude) with context fragments aligned to `evaluation_params`, then comparing numeric scores against provided thresholds.
 
@@ -45,16 +46,16 @@ DeepEval executes each metric by prompting the chosen judge model (Claude) with 
    - Add task-specific criteria by adjusting the `criteria` text and `evaluation_params`.
    - Set thresholds based on acceptable risk tolerance (0.5 minimum in the examples).
 4. **Integrate judge models**
-   - Implement or extend `DeepEvalBaseLLM` to call the judge provider (Claude, OpenAI, etc.).
-   - Externalize provider credentials through environment variables (`ANTHROPIC_API_KEY`).
+  - Implement or extend `DeepEvalBaseLLM` to call the judge provider (Claude, OpenAI, etc.).
+  - Externalize provider credentials through environment variables (`ANTHROPIC_API_KEY`) or a `.env` file loaded by `python-dotenv`.
 5. **Run evaluations**
    - Execute targeted scripts locally:
      ```bash
-     # Test-case generation evaluation
-     python test_app.py
-
      # Requirement analysis evaluation
-     python test_requirement_analysis.py
+     python tests/test_requirement_analysis.py
+
+     # Tabular test-case generation evaluation
+     python tests/test_test_cases_table_output.py
      ```
    - Inspect per-metric scores and failure details in the CLI output.
 6. **Analyze and iterate**
@@ -97,7 +98,7 @@ DeepEval executes each metric by prompting the chosen judge model (Claude) with 
 ## Troubleshooting Checklist
 
 - **Authentication errors**: Confirm `ANTHROPIC_API_KEY` is exported or present in a local `.env` file.
-- **Missing prompts**: Ensure filenames in `read_prompt` calls match the assets in `prompts/`.
+- **Missing prompts**: Ensure filenames in `read_prompt` calls match the assets in `prompts/`; the helpers resolve relative to the project root.
 - **Judge drift**: If `GEval` scores fluctuate, pin the judge model (`claude-3-5-haiku-20241022`) or snapshot completions.
 - **High latency or cost**: Reduce `max_tokens`, preload judgments, or run smaller subsets during development.
 
