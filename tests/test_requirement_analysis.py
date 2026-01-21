@@ -269,9 +269,52 @@ No contradictions found in the requirement.
 """
 )
 
+inventory_notification_test_case = LLMTestCase(
+    input="Requirement: The e-commerce platform must notify warehouse staff immediately when inventory levels drop below the restock threshold.",
+    actual_output="""**Different Interpretations:**
+1. The platform sends an instant alert to warehouse coordinators through the internal dashboard when a SKU falls below the specified restock quantity.
+2. The platform pushes mobile notifications to the on-duty warehouse supervisor as soon as real-time inventory data shows the threshold is crossed.
+3. The platform emails the external fulfillment partner once per hour if any product remains below its restock limit.
+
+**Ambiguities:**
+- Lexical: "immediately" is undefined — does it mean seconds, minutes, or the next monitoring cycle?
+- Lexical: "restock threshold" is vague — is it a fixed number, percentage, or dynamic safety stock level?
+- Contextual: "warehouse staff" is unclear — should alerts go to supervisors, pickers, or an on-call escalation list?
+- Contextual: "notify" lacks detail on the communication channel (email, SMS, push notification, ticket).
+
+**Contradictions:**
+None detected.
+
+**Missing Information:**
+- Revised version 1: "The platform must send SMS alerts to the on-duty warehouse supervisor within 30 seconds when any SKU's available inventory falls below its configured restock quantity."
+- Revised version 2: "When realtime inventory drops under the restock threshold (defined per SKU), post a high-priority ticket to the warehouse Slack channel immediately and email the inventory manager."
+- Revised version 3: "If a product's stock remains below its safety threshold for five consecutive minutes, trigger an API call to the fulfillment system and notify warehouse operations via push notification."
+""",
+    expected_output="""**Different Interpretations:**
+1. The platform issues an alert within seconds to designated warehouse operations personnel whenever a SKU drops below its configured safety stock.
+2. The platform publishes a notification to an incident queue that warehouse staff monitor in real time when stock crosses the restock threshold.
+3. The platform triggers an automated workflow to inform third-party logistics partners immediately after inventory breaches the restock threshold.
+
+**Ambiguities:**
+- Lexical Ambiguities: "immediately" is unquantified — define acceptable latency (e.g., <30 seconds, <1 minute).
+- Lexical Ambiguities: "restock threshold" needs a precise definition (absolute quantity per SKU, percentage, or dynamic forecasted level).
+- Contextual Ambiguities: "warehouse staff" could mean supervisors, fulfillment associates, or an external 3PL team.
+- Contextual Ambiguities: "notify" does not specify channel (SMS, email, push), nor whether acknowledgement is required.
+
+**Contradictions:**
+No contradictions identified.
+
+**Missing Information:**
+- Missing the communication medium(s) and escalation path.
+- Missing the latency/SLA for the notification after the threshold is crossed.
+- Missing the scope of inventory monitoring (per facility, per SKU, or aggregate).
+- Revised: "The platform must send SMS and Slack alerts to the on-duty warehouse supervisor within 30 seconds when any facility-specific SKU inventory falls below its configured safety stock level, and open a restock task in the operations queue."
+""",
+)
+
 # Evaluate with all metrics
 evaluate(
-    [test_case],
+    [test_case, inventory_notification_test_case],
     [
         correctness_metric,
         clarity_metric,
