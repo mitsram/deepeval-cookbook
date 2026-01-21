@@ -1,17 +1,67 @@
 import json
 import os
+import warnings
 from pathlib import Path
+from types import MethodType
 from dotenv import load_dotenv
 from anthropic import Anthropic
-from deepeval import evaluate
+from deepeval import evaluate, login
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from deepeval.metrics import GEval
 from deepeval.models.base_model import DeepEvalBaseLLM
+from deepeval.test_run import global_test_run_manager
 
 load_dotenv()
 
 anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+
+confident_api_key = os.getenv("CONFIDENT_API_KEY")
+if not confident_api_key:
+    raise RuntimeError(
+        "CONFIDENT_API_KEY is required for Confident AI integration. Update your .env file."
+    )
+
+try:
+    login(confident_api_key)
+    global_test_run_manager.disable_request = False
+except Exception as exc:
+    raise RuntimeError(f"Confident AI login failed: {exc}") from exc
+
 client = Anthropic(api_key=anthropic_api_key) if anthropic_api_key else None
+
+
+def _install_confident_fallback() -> None:
+    if getattr(global_test_run_manager, "_confident_fallback_installed", False):
+        return
+
+    original_wrap_up = global_test_run_manager.wrap_up_test_run.__func__
+
+    def _wrap_up_with_fallback(self, run_duration, display_table=True, display=None):
+        self.disable_request = False
+        try:
+            return original_wrap_up(self, run_duration, display_table, display)
+        except RuntimeError as exc:
+            message = str(exc)
+            if "Confident API response missing 'id'" not in message:
+                raise
+            warnings.warn(
+                "Confident AI upload failed (server unavailable). Falling back to local DeepEval reporting.",
+                stacklevel=2,
+            )
+            self.disable_request = True
+            try:
+                return original_wrap_up(self, run_duration, display_table, display)
+            finally:
+                self.disable_request = False
+
+    global_test_run_manager.wrap_up_test_run = MethodType(
+        _wrap_up_with_fallback,
+        global_test_run_manager,
+    )
+    global_test_run_manager._confident_fallback_installed = True
+
+
+_install_confident_fallback()
 
 
 def read_prompt(filename: str) -> str:
@@ -85,6 +135,12 @@ class ClaudeModel(DeepEvalBaseLLM):
 test_cases_prompt = read_prompt("test_cases_table_output.md")
 claude_model = ClaudeModel(model_name="claude-3-5-haiku-20241022")
 
+hyperparameters = {
+    "suite": "test_cases_table_output_v1",
+    "judge_model": claude_model.get_model_name(),
+    "prompt_asset": "prompts/test_cases_table_output.md",
+}
+
 table_format_metric = GEval(
     name="Table Format",
     criteria=(
@@ -141,4 +197,5 @@ password_reset_test_case = LLMTestCase(
 evaluate(
     [password_reset_test_case],
     [table_format_metric, content_alignment_metric, completeness_metric],
+    hyperparameters=hyperparameters,
 )

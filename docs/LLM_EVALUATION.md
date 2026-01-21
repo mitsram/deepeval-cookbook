@@ -47,7 +47,9 @@ DeepEval executes each metric by prompting the chosen judge model (Claude) with 
    - Set thresholds based on acceptable risk tolerance (0.5 minimum in the examples).
 4. **Integrate judge models**
   - Implement or extend `DeepEvalBaseLLM` to call the judge provider (Claude, OpenAI, etc.).
-  - Externalize provider credentials through environment variables (`ANTHROPIC_API_KEY`) or a `.env` file loaded by `python-dotenv`.
+  - Externalize provider credentials through environment variables (`ANTHROPIC_API_KEY`, `CONFIDENT_API_KEY`) or a `.env` file loaded by `python-dotenv`.
+  - When `CONFIDENT_API_KEY` is present the harnesses call `deepeval.login`, pushing evaluation telemetry to Confident AI dashboards automatically.
+  - The harnesses now stop execution if `CONFIDENT_API_KEY` is missing or authentication fails to guarantee Confident uploads happen.
 5. **Run evaluations**
    - Execute targeted scripts locally:
      ```bash
