@@ -47,8 +47,8 @@ Deactivate later with `deactivate`. Delete `.venv/` to reset the environment.
 With the environment active and credentials exported, run the test harnesses via Python:
 
 ```bash
-python tests/test_requirement_analysis.py
-python tests/test_test_cases_table_output.py
+deepeval test run tests/test_requirement_analysis.py
+deepeval test run tests/test_test_cases_table_output.py
 ```
 
 Each script loads the corresponding prompt, wraps the Anthropic client in a DeepEval-compatible model, and reports per-metric scores for the configured `LLMTestCase`.
